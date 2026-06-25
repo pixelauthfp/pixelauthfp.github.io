@@ -4,125 +4,755 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PIXELAUTH</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <!-- Font Awesome 6 (бесплатно) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts: Inter + JetBrains Mono (как в aa.html) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+    <!-- CryptoJS (необходим для TOTP) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap');
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{min-height:100dvh;background:#0a0a1f;color:#e0e0ff;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;
-            background-image:radial-gradient(circle at 20% 80%,rgba(120,119,198,0.15)0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(255,55,95,0.12)0%,transparent 50%);}
-        .card{background:rgba(15,15,35,0.75);backdrop-filter:blur(24px);border-radius:32px;padding:48px 32px;max-width:420px;width:100%;text-align:center;
-            box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 80px rgba(136,108,228,0.15);border:1px solid rgba(136,108,228,0.2);position:relative;overflow:hidden;}
-        .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ff0a1f,#886ce4,#00d4ff);opacity:0.7;}
-        .logo{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:900;letter-spacing:6px;background:linear-gradient(90deg,#ff0a1f,#886ce4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
-        .subtitle{font-size:14px;opacity:0.7;letter-spacing:3px;margin-bottom:40px;}
-        .code-display{display:flex;flex-direction:column;align-items:center;gap:12px;margin:32px 0;padding:28px 20px;background:rgba(30,30,60,0.4);border-radius:20px;cursor:pointer;transition:all .3s;user-select:none;}
-        .code-display:hover{background:rgba(50,50,90,0.5);transform:translateY(-4px);box-shadow:0 20px 40px rgba(136,108,228,0.2);}
-        .code-full{font-family:'JetBrains Mono',monospace;font-size:clamp(48px,14vw,76px);font-weight:800;background:linear-gradient(90deg,#ff0a1f 0%,#ff4e6e 50%,#886ce4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-        .copy-hint{font-size:15px;opacity:0.8;color:#c0a8ff;line-height:1.4;}
-        .copy-hint small{font-size:12px;opacity:0.6;display:block;}
-        .timer{font-family:'JetBrains Mono',monospace;font-size:64px;font-weight:700;margin:20px 0 4px;background:linear-gradient(90deg,#ff0a1f,#886ce4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-        .timer-label{font-size:14px;opacity:0.65;color:#b19cd9;margin-bottom:6px;line-height:1.4;}
-        .timer-label small{font-size:11px;opacity:0.6;display:block;}
-        .secret-hint{font-size:12px;color:#aaa;opacity:0.7;letter-spacing:1.3px;margin-top:24px;font-family:'JetBrains Mono',monospace;user-select:text;}
-        progress{width:100%;height:8px;border-radius:4px;background:rgba(255,255,255,0.1);margin-top:16px;border:none;appearance:none;}
-        progress::-webkit-progress-bar{background:rgba(255,255,255,0.1);border-radius:4px;}
-        progress::-webkit-progress-value{background:linear-gradient(90deg,#ff0a1f,#886ce4);border-radius:4px;}
-        progress::-moz-progress-bar{background:linear-gradient(90deg,#ff0a1f,#886ce4);border-radius:4px;}
-        .copied{position:fixed;top:-100px;left:50%;transform:translateX(-50%);background:linear-gradient(110deg,#a78bfa,#7c3aed,#6b46c1);color:#fff;padding:15px 42px;border-radius:50px;font-weight:700;font-size:18px;box-shadow:0 12px 35px rgba(124,58,237,0.4);transition:all .45s;z-index:1000;opacity:0;}
-        .copied.show{top:40px;opacity:1;}
-        .error{color:#ff6b6b;margin-top:20px;font-size:14px;}
+        /* Стили объединены: основа из aa.html + улучшения из script.js */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100dvh;
+            background: #0a0a1f;
+            color: #e0e0ff;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background-image: radial-gradient(circle at 20% 80%, rgba(120,119,198,0.15) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 20%, rgba(255,55,95,0.12) 0%, transparent 50%);
+        }
+        .card {
+            background: rgba(15,15,35,0.75);
+            backdrop-filter: blur(24px);
+            border-radius: 32px;
+            padding: 40px 28px 36px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 80px rgba(136,108,228,0.15);
+            border: 1px solid rgba(136,108,228,0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ff0a1f, #886ce4, #00d4ff);
+            opacity: 0.7;
+        }
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 6px;
+            background: linear-gradient(90deg, #ff0a1f, #886ce4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.7;
+            letter-spacing: 3px;
+            margin-bottom: 28px;
+            font-weight: 500;
+        }
+        /* Поле ввода токена + кнопка */
+        .token-area {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+        .token-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .token-row input {
+            flex: 1;
+            padding: 14px 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(136,108,228,0.3);
+            background: rgba(20,20,50,0.7);
+            color: #f0f0ff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            letter-spacing: 2px;
+            outline: none;
+            transition: 0.3s;
+            min-width: 160px;
+        }
+        .token-row input:focus {
+            border-color: #886ce4;
+            box-shadow: 0 0 0 3px rgba(136,108,228,0.3);
+        }
+        .token-row input::placeholder {
+            color: #7a7aaa;
+            font-size: 14px;
+            letter-spacing: 1px;
+            opacity: 0.6;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 22px;
+            border-radius: 40px;
+            border: none;
+            font-weight: 700;
+            font-size: 16px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: #fff;
+            cursor: pointer;
+            transition: 0.25s;
+            box-shadow: 0 8px 24px rgba(124,58,237,0.3);
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.3px;
+        }
+        .btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 32px rgba(124,58,237,0.5);
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid rgba(136,108,228,0.4);
+            box-shadow: none;
+            color: #c0b0f0;
+        }
+        .btn-outline:hover {
+            background: rgba(136,108,228,0.15);
+            border-color: #886ce4;
+            box-shadow: 0 0 20px rgba(136,108,228,0.15);
+        }
+        .btn-sm { padding: 8px 16px; font-size: 14px; }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); }
+        .flex-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+        /* Код-дисплей (как в aa.html но с доп. стилями) */
+        .code-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin: 20px 0 22px;
+            padding: 24px 16px 18px;
+            background: rgba(30,30,60,0.4);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all .3s;
+            user-select: none;
+            border: 1px solid transparent;
+        }
+        .code-display:hover {
+            background: rgba(50,50,90,0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(136,108,228,0.2);
+            border-color: rgba(136,108,228,0.25);
+        }
+        .code-full {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(48px, 14vw, 76px);
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff0a1f 0%, #ff4e6e 50%, #886ce4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 4px;
+        }
+        .copy-hint {
+            font-size: 14px;
+            opacity: 0.7;
+            color: #c0a8ff;
+            line-height: 1.4;
+        }
+        .copy-hint small {
+            font-size: 11px;
+            opacity: 0.5;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .timer {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 58px;
+            font-weight: 700;
+            margin: 12px 0 2px;
+            background: linear-gradient(90deg, #ff0a1f, #886ce4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .timer-label {
+            font-size: 14px;
+            opacity: 0.65;
+            color: #b19cd9;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .timer-label small {
+            font-size: 11px;
+            opacity: 0.5;
+            display: block;
+        }
+        progress {
+            width: 100%;
+            height: 8px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.08);
+            margin-top: 12px;
+            border: none;
+            appearance: none;
+        }
+        progress::-webkit-progress-bar {
+            background: rgba(255,255,255,0.08);
+            border-radius: 20px;
+        }
+        progress::-webkit-progress-value {
+            background: linear-gradient(90deg, #ff0a1f, #886ce4);
+            border-radius: 20px;
+            transition: width 0.2s;
+        }
+        progress::-moz-progress-bar {
+            background: linear-gradient(90deg, #ff0a1f, #886ce4);
+            border-radius: 20px;
+        }
+
+        .secret-hint {
+            font-size: 13px;
+            color: #a9a2d0;
+            opacity: 0.8;
+            letter-spacing: 1.2px;
+            margin-top: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            user-select: text;
+            word-break: break-all;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 14px;
+            border-radius: 40px;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .error {
+            color: #ff6b6b;
+            margin-top: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .share-area {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(136,108,228,0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .share-area .flex-row { gap: 8px; }
+        .share-url {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 40px;
+            border: 1px solid rgba(136,108,228,0.2);
+            background: rgba(10,10,30,0.6);
+            color: #b8b0e0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            outline: none;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+        .share-url:focus { border-color: #886ce4; }
+
+        .footer-links {
+            margin-top: 24px;
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            font-size: 13px;
+            opacity: 0.6;
+        }
+        .footer-links a {
+            color: #a99ad0;
+            text-decoration: none;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .footer-links a:hover {
+            color: #d0c0ff;
+            opacity: 1;
+        }
+
+        /* Уведомление (toast) */
+        .notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(20,20,50,0.95);
+            backdrop-filter: blur(12px);
+            color: #f0eeff;
+            padding: 16px 32px;
+            border-radius: 60px;
+            border-left: 6px solid #886ce4;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 15px;
+            font-weight: 500;
+            opacity: 0;
+            transition: 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+            pointer-events: none;
+            z-index: 999;
+            max-width: 90vw;
+        }
+        .notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+        .notification i { font-size: 22px; }
+        .notification-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 30px 0;
+            color: #7a7aaa;
+        }
+        .empty-state i { font-size: 48px; opacity: 0.3; }
+
+        /* адаптив */
+        @media (max-width: 480px) {
+            .card { padding: 28px 16px 24px; }
+            .token-row input { font-size: 16px; padding: 12px 14px; }
+            .btn { font-size: 14px; padding: 10px 16px; }
+            .code-full { font-size: 48px; }
+            .timer { font-size: 46px; }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
+
+    <div class="card" id="app">
         <div class="logo">PIXELAUTH</div>
         <div class="subtitle">SECURE OTP GENERATOR</div>
-       
-        <div class="code-display" id="code-block">
-            <div class="code-full" id="code">------</div>
-            <div class="copy-hint">
-                Нажми, чтобы скопировать
-                <small>Click to copy</small>
+
+        <!-- Поле ввода токена + кнопки -->
+        <div class="token-area">
+            <div class="token-row">
+                <input type="text" id="tokenInput" placeholder="Введите Base32 токен" autofocus spellcheck="false">
+                <button class="btn" id="generateBtn"><i class="fas fa-key"></i> Сгенерировать</button>
+            </div>
+            <div class="flex-row">
+                <button class="btn btn-outline btn-sm" id="newCodeBtn"><i class="fas fa-undo-alt"></i> Новый токен</button>
+                <button class="btn btn-outline btn-sm" id="copyBtn"><i class="far fa-copy"></i> Код</button>
+                <button class="btn btn-outline btn-sm" id="copyUrlBtn"><i class="fas fa-link"></i> Ссылка</button>
             </div>
         </div>
-       
-        <div class="timer" id="timer">30</div>
-        <div class="timer-label">
-            Время до обновления кода
-            <small>Time until code refresh</small>
+
+        <!-- Пустое состояние -->
+        <div id="emptyState" class="empty-state">
+            <i class="fas fa-shield-alt"></i>
+            <span>Введите токен для генерации</span>
         </div>
-       
-        <progress id="progress" value="0" max="30"></progress>
-        <div class="secret-hint" id="secret-hint"></div>
-        <div class="error" id="error"></div>
+
+        <!-- Блок с кодом (скрыт по умолчанию) -->
+        <div id="codeContent" style="display:none;">
+            <div class="code-display" id="codeDisplay">
+                <div class="code-full" id="codeValue">------</div>
+                <div class="copy-hint">
+                    Нажми, чтобы скопировать
+                    <small>click to copy</small>
+                </div>
+            </div>
+
+            <div class="timer" id="timeCounter">30</div>
+            <div class="timer-label">
+                Время до обновления
+                <small>seconds until refresh</small>
+            </div>
+            <progress id="progressBar" value="30" max="30"></progress>
+
+            <div class="secret-hint" id="tokenPreview">••••</div>
+        </div>
+
+        <!-- Область шеринга -->
+        <div class="share-area">
+            <input type="text" class="share-url" id="shareUrl" readonly placeholder="Ссылка с токеном">
+            <div class="flex-row">
+                <span style="font-size:12px; opacity:0.5;"><i class="fas fa-lock"></i> данные только локально</span>
+            </div>
+        </div>
+
+        <!-- Футер -->
+        <div class="footer-links">
+            <a href="#" id="privacyLink"><i class="fas fa-user-secret"></i> Приватность</a>
+            <a href="#" id="githubLink"><i class="fab fa-github"></i> GitHub</a>
+            <a href="#" id="fontLink"><i class="fas fa-font"></i> Atkinson</a>
+        </div>
     </div>
-   
-    <div class="copied" id="copied">
-        Скопировано!
-        <small>Copied!</small>
+
+    <!-- Уведомление -->
+    <div class="notification" id="notification">
+        <i class="fas fa-info-circle"></i>
+        <span class="notification-text" id="notificationText">Готово</span>
     </div>
-    
+
     <script>
-        const params = new URLSearchParams(location.search);
-        const hasSecret = params.has('2fa') || params.has('secret');
-        let timeOffset = 0;
-        let lastPeriod = -1;
-        let isFetching = false;
-        
-        async function syncWithServer() {
-            if (isFetching) return;
-            isFetching = true;
-            try {
-                const start = performance.now();
-                const res = await fetch(`${location.pathname}?json=1&${params.toString()}&t=${Date.now()}`, { cache: 'no-store' });
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                document.getElementById('code').textContent = data.code;
-                document.getElementById('secret-hint').textContent = data.secret;
-                const latency = performance.now() - start;
-                timeOffset = data.serverTime - Date.now() + latency / 2;
-            } catch (e) {
-                console.warn('2FA sync error');
-            } finally {
-                isFetching = false;
+        // ================= ВСЯ ЛОГИКА ИЗ script.js (адаптирована) =================
+        (function() {
+            "use strict";
+
+            // DOM элементы
+            const tokenInput = document.getElementById('tokenInput');
+            const generateBtn = document.getElementById('generateBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const newCodeBtn = document.getElementById('newCodeBtn');
+            const copyUrlBtn = document.getElementById('copyUrlBtn');
+            const codeDisplay = document.getElementById('codeDisplay');
+            const emptyState = document.getElementById('emptyState');
+            const codeContent = document.getElementById('codeContent');
+            const codeValue = document.getElementById('codeValue');
+            const timeCounter = document.getElementById('timeCounter');
+            const progressBar = document.getElementById('progressBar');
+            const shareUrl = document.getElementById('shareUrl');
+            const tokenPreview = document.getElementById('tokenPreview');
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            const privacyLink = document.getElementById('privacyLink');
+            const githubLink = document.getElementById('githubLink');
+            const fontLink = document.getElementById('fontLink');
+
+            // Переменные состояния
+            let currentToken = '';
+            let updateInterval = null;
+            let isFontLoaded = false;
+
+            // ===== Вспомогательные функции =====
+            function showNotification(message, type = 'info') {
+                const icon = notification.querySelector('i');
+                const colors = {
+                    success: { icon: 'fa-check-circle', color: '#4caf50', border: '#4caf50' },
+                    error: { icon: 'fa-exclamation-circle', color: '#ff4444', border: '#ff4444' },
+                    warning: { icon: 'fa-exclamation-triangle', color: '#ffa726', border: '#ffa726' },
+                    info: { icon: 'fa-info-circle', color: '#6c63ff', border: '#6c63ff' }
+                };
+                const cfg = colors[type] || colors.info;
+                icon.className = 'fas ' + cfg.icon;
+                icon.style.color = cfg.color;
+                notification.style.borderLeftColor = cfg.border;
+                notificationText.textContent = message;
+                notification.classList.add('show');
+                clearTimeout(window._notifTimeout);
+                window._notifTimeout = setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 4000);
             }
-        }
-        
-        function tick() {
-            const now = Date.now();
-            const serverNow = now + timeOffset;
-            const currentPeriod = Math.floor(serverNow / 30000);
-            const msIntoPeriod = serverNow % 30000;
-            const secondsElapsed = Math.floor(msIntoPeriod / 1000);
-            const secondsLeft = 30 - secondsElapsed;
-            document.getElementById('timer').textContent = secondsLeft < 10 ? '0' + secondsLeft : secondsLeft;
-            document.getElementById('progress').value = secondsElapsed;
-            
-            if (currentPeriod !== lastPeriod) {
-                lastPeriod = currentPeriod;
-                syncWithServer();
+
+            // Копирование fallback
+            function copyToClipboardFallback(text) {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                textArea.style.fontFamily = 'monospace';
+                textArea.style.fontSize = '16px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) showNotification('Код скопирован!', 'success');
+                    else showNotification('Не удалось скопировать', 'error');
+                } catch (err) {
+                    showNotification('Ошибка копирования', 'error');
+                    console.error(err);
+                }
+                document.body.removeChild(textArea);
             }
-        }
-        
-        document.getElementById('code-block').onclick = () => {
-            const code = document.getElementById('code').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                const toast = document.getElementById('copied');
-                toast.classList.add('show');
-                setTimeout(() => toast.classList.remove('show'), 2000);
+
+            // Копирование в буфер
+            function copyToClipboard(text, successMsg = 'Скопировано!') {
+                if (!text) { showNotification('Нет данных для копирования', 'error'); return; }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        showNotification(successMsg, 'success');
+                    }).catch(() => {
+                        copyToClipboardFallback(text);
+                    });
+                } else {
+                    copyToClipboardFallback(text);
+                }
+            }
+
+            // ===== Base32 → Hex (из script.js) =====
+            function base32ToHex(base32) {
+                const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+                base32 = base32.toUpperCase().replace(/=+$/, '').replace(/\s/g, '');
+                if (!base32) return '';
+                for (let i = 0; i < base32.length; i++) {
+                    if (alphabet.indexOf(base32.charAt(i)) === -1) {
+                        throw new Error(`Неверный символ Base32: ${base32.charAt(i)}`);
+                    }
+                }
+                let bits = '';
+                for (let i = 0; i < base32.length; i++) {
+                    const val = alphabet.indexOf(base32.charAt(i));
+                    bits += val.toString(2).padStart(5, '0');
+                }
+                let hex = '';
+                for (let i = 0; i + 8 <= bits.length; i += 8) {
+                    const byte = bits.substr(i, 8);
+                    hex += parseInt(byte, 2).toString(16).padStart(2, '0');
+                }
+                return hex;
+            }
+
+            // ===== TOTP генератор (CryptoJS) =====
+            function generateTOTPCode(secret) {
+                try {
+                    const key = base32ToHex(secret);
+                    if (!key) throw new Error('Неверный ключ');
+                    const time = Math.floor(Date.now() / 1000 / 30);
+                    const timeHex = ('0000000000000000' + time.toString(16)).slice(-16);
+                    const keyWords = CryptoJS.enc.Hex.parse(key);
+                    const hmac = CryptoJS.HmacSHA1(CryptoJS.enc.Hex.parse(timeHex), keyWords);
+                    const hmacHex = hmac.toString(CryptoJS.enc.Hex);
+                    const offset = parseInt(hmacHex.slice(-1), 16) * 2;
+                    const otpHex = hmacHex.substr(offset, 8);
+                    let otp = parseInt(otpHex, 16) & 0x7fffffff;
+                    otp = otp % 1000000;
+                    const formatted = otp.toString().padStart(6, '0');
+                    return formatted.substring(0, 3) + ' ' + formatted.substring(3);
+                } catch (e) {
+                    console.error('TOTP error:', e);
+                    showNotification('Ошибка генерации. Проверьте токен.', 'error');
+                    return 'ERR OR';
+                }
+            }
+
+            // ===== Обновление UI =====
+            function updateCodeDisplay() {
+                if (!currentToken) return;
+                const code = generateTOTPCode(currentToken);
+                const timeLeft = 30 - (Math.floor(Date.now() / 1000) % 30);
+                codeValue.textContent = code;
+                timeCounter.textContent = timeLeft;
+                const progressPercent = (timeLeft / 30) * 100;
+                progressBar.value = 30 - timeLeft; // progress от 0 до 30
+                // цвет прогресс-бара (динамика)
+                if (timeLeft < 10) {
+                    progressBar.style.background = 'linear-gradient(90deg, #ff4444, #ff8888)';
+                } else if (timeLeft < 20) {
+                    progressBar.style.background = 'linear-gradient(90deg, #ffa726, #ffca6d)';
+                } else {
+                    progressBar.style.background = 'linear-gradient(90deg, #6c63ff, #ff6584)';
+                }
+                // анимация кода при обновлении
+                if (timeLeft === 30 || timeLeft === 29) {
+                    codeValue.style.animation = 'none';
+                    setTimeout(() => {
+                        codeValue.style.animation = 'gradientText 4s ease infinite';
+                    }, 20);
+                }
+            }
+
+            function showCodeDisplay() {
+                emptyState.style.display = 'none';
+                codeContent.style.display = 'block';
+                const preview = currentToken.length > 20 ? currentToken.substring(0, 20) + '…' : currentToken;
+                tokenPreview.textContent = preview;
+                codeDisplay.classList.add('generated');
+                setTimeout(() => codeDisplay.classList.remove('generated'), 800);
+                updateCodeDisplay();
+            }
+
+            function updateUrlWithToken() {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('2fa', currentToken);
+                window.history.replaceState({}, '', newUrl);
+                shareUrl.value = newUrl.toString();
+            }
+
+            function startUpdateInterval() {
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(updateCodeDisplay, 1000);
+            }
+
+            // ===== Генерация =====
+            function generateCode() {
+                const token = tokenInput.value.trim() || currentToken;
+                if (!token) {
+                    showNotification('Введите 2FA токен', 'error');
+                    tokenInput.focus();
+                    return;
+                }
+                const base32Regex = /^[A-Z2-7]+=*$/i;
+                if (!base32Regex.test(token)) {
+                    showNotification('Токен должен быть в формате Base32 (A-Z, 2-7)', 'error');
+                    return;
+                }
+                currentToken = token.toUpperCase().replace(/\s/g, '');
+                tokenInput.value = currentToken;
+                showCodeDisplay();
+                updateUrlWithToken();
+                startUpdateInterval();
+                showNotification('2FA код сгенерирован!', 'success');
+                // сохраняем в localStorage
+                try {
+                    localStorage.setItem('2fa_last_token', currentToken);
+                    localStorage.setItem('2fa_last_used', new Date().toISOString());
+                } catch (e) {}
+            }
+
+            // ===== Сброс =====
+            function resetForNewToken() {
+                if (updateInterval) { clearInterval(updateInterval); updateInterval = null; }
+                currentToken = '';
+                tokenInput.value = '';
+                emptyState.style.display = 'flex';
+                codeContent.style.display = 'none';
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.delete('2fa');
+                window.history.replaceState({}, '', newUrl);
+                shareUrl.value = '';
+                tokenInput.focus();
+                showNotification('Готово для нового токена', 'info');
+            }
+
+            // ===== Обработчики =====
+            generateBtn.addEventListener('click', generateCode);
+            tokenInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') generateCode(); });
+            tokenInput.addEventListener('input', function() {
+                if (this.value) {
+                    this.value = this.value.toUpperCase().replace(/[^A-Z2-7=]/g, '');
+                }
             });
-        };
-        
-        if (hasSecret) {
-            syncWithServer().then(() => {
-                lastPeriod = Math.floor((Date.now() + timeOffset) / 30000);
-                setInterval(tick, 250);
-                tick();
+
+            copyBtn.addEventListener('click', function() {
+                if (!currentToken) { showNotification('Сначала сгенерируйте код', 'error'); return; }
+                const code = codeValue.textContent.replace(/\s/g, '');
+                copyToClipboard(code, 'Код скопирован!');
+                // визуальный фидбек
+                this.innerHTML = '<i class="fas fa-check"></i>';
+                this.style.background = '#4caf50';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="far fa-copy"></i> Код';
+                    this.style.background = '';
+                }, 2000);
             });
-        } else {
-            document.getElementById('error').textContent = '2-FA ТОКЕН НЕ УКАЗАН';
-        }
+
+            newCodeBtn.addEventListener('click', resetForNewToken);
+
+            copyUrlBtn.addEventListener('click', function() {
+                if (!shareUrl.value) { showNotification('Сначала сгенерируйте код', 'error'); return; }
+                copyToClipboard(shareUrl.value, 'Ссылка скопирована!');
+                this.innerHTML = '<i class="fas fa-check"></i> Скопировано';
+                this.style.background = '#4caf50';
+                this.style.color = 'white';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-link"></i> Ссылка';
+                    this.style.background = '';
+                    this.style.color = '';
+                }, 2000);
+            });
+
+            // Клик по коду для копирования
+            codeDisplay.addEventListener('click', function() {
+                if (!currentToken) return;
+                const code = codeValue.textContent.replace(/\s/g, '');
+                copyToClipboard(code, 'Код скопирован!');
+            });
+
+            // Футер
+            privacyLink.addEventListener('click', (e) => { e.preventDefault(); showNotification('🔒 Все данные локально. Ничего не отправляется.', 'info'); });
+            githubLink.addEventListener('click', (e) => { e.preventDefault(); showNotification('📁 Исходный код на GitHub', 'info'); });
+            fontLink.addEventListener('click', (e) => { e.preventDefault(); showNotification('Открываю информацию о шрифте...', 'info'); setTimeout(() => window.open('https://brailleinstitute.org/freefont', '_blank'), 400); });
+
+            // ===== Проверка URL =====
+            function checkUrlForToken() {
+                const params = new URLSearchParams(window.location.search);
+                const tokenFromUrl = params.get('2fa');
+                if (tokenFromUrl) {
+                    tokenInput.value = tokenFromUrl.toUpperCase().replace(/[^A-Z2-7=]/g, '');
+                    setTimeout(() => { generateCode(); showNotification('Токен загружен из URL', 'success'); }, 300);
+                }
+            }
+
+            // ===== Загрузка из localStorage =====
+            function loadTokenFromStorage() {
+                try {
+                    const saved = localStorage.getItem('2fa_last_token');
+                    const used = localStorage.getItem('2fa_last_used');
+                    if (saved && used) {
+                        const days = (new Date() - new Date(used)) / (1000*60*60*24);
+                        if (days < 7) return saved;
+                    }
+                } catch (e) {}
+                return null;
+            }
+
+            // ===== Инициализация =====
+            document.addEventListener('DOMContentLoaded', function() {
+                checkUrlForToken();
+                // если нет токена из URL, пробуем localStorage
+                if (!currentToken) {
+                    const saved = loadTokenFromStorage();
+                    if (saved && !tokenInput.value) {
+                        tokenInput.value = saved;
+                        showNotification('Загружен последний токен', 'info');
+                    }
+                }
+                // автофокус
+                tokenInput.focus();
+
+                // пример URL
+                const base = window.location.origin + window.location.pathname;
+                document.querySelector('.subtitle')?.setAttribute('title', `${base}?2fa=JBSWY3DPEHPK3PXP`);
+            });
+
+            // Экспорт для отладки
+            window.TwoFAGenerator = {
+                generateCode,
+                resetForNewToken,
+                updateCodeDisplay,
+                base32ToHex,
+                generateTOTPCode,
+                isFontLoaded: () => isFontLoaded
+            };
+
+            // Показываем приветствие
+            setTimeout(() => {
+                if (!currentToken) {
+                    showNotification('Введите 2FA токен для генерации кода', 'info');
+                }
+            }, 600);
+
+        })();
     </script>
 </body>
 </html>
